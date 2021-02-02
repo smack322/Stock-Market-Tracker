@@ -3,17 +3,16 @@ const expressJwt = require('express-jwt');
 const _ = require('lodash');
 const { Oauth2Client } = require('google-auth-library');
 const fetch = require('node-fetch');
-const { va } = require('express-validation');
+const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 //Custom error handler to get useful error from database errors
 const {errorHandler} = require('../helpers/dbErrorHandling')
 //I will use for send email sendgrid you can use nodemail also
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.MAIL_KEY)
+
 exports.registerController = (req, res) => {
-    // const name = req.body;
-    // const email = req.body;
-    // const password = req.body;
+
     const {name, email, password} = req.body;
     console.log(name, email, password);
     const errors = validationResult(req)
@@ -43,12 +42,12 @@ exports.registerController = (req, res) => {
             },
             process.env.JWT_ACCOUNT_ACTIVATION,
             {
-                expiresIn: '15m'
+                expiresIn: '5m'
             }
         )
         const emailData = {
             from: process.env.EMAIL_FROM,
-            to: to,
+            to: email,
             subject: 'Account activation link',
             html: `
             <h1>Please click the link to activate </h1>
@@ -56,19 +55,22 @@ exports.registerController = (req, res) => {
             <hr/>
             <p>This email contains sensitive info</p>
             <p>${process.env.CLIENT_URL}</p>`
-        }
-    }
+        };
+
         sgMail.send(emailData).then(sent => {
             return res.json({
                 message: `Email has been sent to ${email}`
+                });
             }).catch(err => {
                 return res.status(400).json({
-                    error: errorHandler(err)
-                })
-            })
-        })
+                    success: false,
+                    errors: errorHandler(err)
+                });     
+        });
+    }
+
     // res.json({
     //     success: true,
     //     message: 'Register route'
     // })
-}
+};
